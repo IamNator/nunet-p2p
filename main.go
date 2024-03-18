@@ -5,14 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
 	"github.com/libp2p/go-libp2p"
 	kad "github.com/libp2p/go-libp2p-kad-dht"   // for peer discovery
 	pubsub "github.com/libp2p/go-libp2p-pubsub" // for message broadcasting
-	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/p2p/transport/tcp" // example transport
@@ -20,6 +18,10 @@ import (
 
 const (
 	topicName = "container-deployment" // Topic for deployment messages
+)
+
+var (
+	port = 8080 // REST API port
 )
 
 type deployRequest struct {
@@ -30,16 +32,16 @@ type deployRequest struct {
 func main() {
 	// Create a libp2p host
 	ctx := context.Background()
-	bb, _ := os.ReadFile("host.key")
-	privKey, err := crypto.UnmarshalPrivateKey(bb) // Replace with key generation
-	if err != nil {
-		panic(err)
-	}
+	// bb, _ := os.ReadFile("host.key")
+	// privKey, err := crypto.UnmarshalPrivateKey(bb) // Replace with key generation
+	// if err != nil {
+	// 	panic(err)
+	// }
 	opts := libp2p.FallbackDefaults // Adjust transport options as needed
 	// Add TCP transport for example
 	opts = libp2p.ChainOptions(
 		opts,
-		libp2p.Identity(privKey),
+		// libp2p.Identity(privKey),
 		libp2p.Transport(tcp.NewTCPTransport),
 	)
 
@@ -153,7 +155,15 @@ func main() {
 
 	// Start listening for incoming connections
 	fmt.Println("Listening for deployment requests...")
-	select {}
+retry:
+	if err := http.ListenAndServe(fmt.Sprintf(":%d", port), nil); err != nil {
+		if strings.Contains(err.Error(), "already in use") {
+			port = port + 1
+			fmt.Println("Port already in use, trying to listen on port ", port)
+			goto retry
+		}
+		println("Error starting server:", err.Error())
+	}
 }
 
 func processDeploymentRequest(data []byte) {
