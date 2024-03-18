@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/libp2p/go-libp2p"
 	kad "github.com/libp2p/go-libp2p-kad-dht"   // for peer discovery
@@ -91,6 +92,29 @@ func main() {
 	if err := kademliaDHT.Bootstrap(ctx); err != nil {
 		panic(err)
 	}
+
+	go func() {
+		for {
+			peerID, err := kademliaDHT.GetClosestPeers(ctx, topicName)
+			if err != nil {
+				fmt.Println("Error finding peers:", err)
+				continue
+			}
+			for _, p := range peerID {
+				if p == host.ID() {
+					continue
+				}
+				fmt.Println("Connecting to peer:", p)
+				peer, err := kademliaDHT.FindPeer(ctx, p)
+				if err != nil {
+					fmt.Println("Error finding peer:", err)
+					continue
+				}
+				host.Connect(ctx, peer)
+			}
+			time.Sleep(time.Minute) // Adjust discovery interval as needed
+		}
+	}()
 
 	// Advertise the host's address
 	fmt.Println("Host ID:", host.ID())
