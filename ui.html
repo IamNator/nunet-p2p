@@ -38,12 +38,12 @@
 <body>
     <h2>Container Deployer/Manager</h2>
     <form id="deployForm" onSubmit="deployContainer()">
-        <label for="host">Deployment URL:</label>
-        <input type="text" id="host" name="host" placeholder="Enter Host" required>
+        <label for="host">Host Maching:</label>
+        <input type="text" id="host" name="host" placeholder="Enter Host" value="http://localhost:8080" required>
         <label for="program">Program Name:</label>
-        <input type="text" id="program" name="program" placeholder="Enter program name" required>
+        <input type="text" id="program" name="program" placeholder="Enter program name" value="go" required>
         <label for="arguments">Arguments:</label>
-        <textarea id="arguments" name="arguments" placeholder="Enter arguments (comma-separated)"></textarea>
+        <textarea id="arguments" name="arguments" placeholder="Enter arguments (comma-separated)" value="run main.go"></textarea>
         <button type="submit" >Deploy Container</button>
     </form>
 

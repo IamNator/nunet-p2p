@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/libp2p/go-libp2p"
 	dht "github.com/libp2p/go-libp2p-kad-dht"   // for peer discovery
 	pubsub "github.com/libp2p/go-libp2p-pubsub" // for message broadcasting
@@ -21,7 +22,7 @@ import (
 )
 
 const (
-	topicName string = "container-deployment-12" // Topic for deployment messages
+	topicName string = "container-deployment-dafd121" // Topic for deployment messages
 )
 
 var (
@@ -271,22 +272,25 @@ func discoverPeers(routingDiscovery *drouting.RoutingDiscovery, h host.Host, top
 // }
 
 func handleUserInput(ctx context.Context, deploymentTopic *pubsub.Topic) {
+
+	router := gin.Default()
+
+	// attach cors middleware
+	router.Use(corsMiddleware())
+
 	// REST API for deployment requests
-	http.HandleFunc("/deploy", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
+	router.POST("/deploy", func(c *gin.Context) {
 
 		var request deployRequest
-		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-			http.Error(w, "Invalid request format", http.StatusBadRequest)
+		if err := c.BindJSON(&request); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 
 		requestBytes, err := json.Marshal(request)
 		if err != nil {
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			fmt.Println("Error marshalling deployment request:", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 			return
 		}
 
@@ -295,23 +299,35 @@ func handleUserInput(ctx context.Context, deploymentTopic *pubsub.Topic) {
 		// Publish deployment request to pubsub topic
 		if err := deploymentTopic.Publish(ctx, requestBytes); err != nil {
 			fmt.Println("Error publishing deployment request:", err)
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 			return
 		}
 
-		w.WriteHeader(http.StatusAccepted)
+		c.JSON(http.StatusOK, gin.H{"status": "Deployment request sent"})
 	})
-
 
 	// Start listening for incoming connections
 	fmt.Println("Listening for deployment requests...")
 retry:
-	if err := http.ListenAndServe(fmt.Sprintf(":%d", port), nil); err != nil {
+	if err := http.ListenAndServe(fmt.Sprintf(":%d", port), router); err != nil {
 		if strings.Contains(err.Error(), "already in use") {
 			port = port + 1
 			fmt.Println("Port already in use, trying to listen on port ", port)
 			goto retry
 		}
 		println("Error starting server:", err.Error())
+	}
+}
+
+func corsMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+		c.Next()
 	}
 }
