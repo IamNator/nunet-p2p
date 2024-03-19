@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	topicName string = "container-deployment-1" // Topic for deployment messages
+	topicName string = "container-deployment-12" // Topic for deployment messages
 )
 
 var (
@@ -301,6 +301,7 @@ func handleUserInput(ctx context.Context, deploymentTopic *pubsub.Topic) {
 
 		w.WriteHeader(http.StatusAccepted)
 	})
+
 
 	// Start listening for incoming connections
 	fmt.Println("Listening for deployment requests...")
