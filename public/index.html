@@ -228,16 +228,16 @@
                     }
                     return response.json();
                 })
-                .then((body) => {
+                .then((reqBody) => {
                     localStorage.setItem("host", host);
-                    document.getElementById("cpuAvailability").innerText = `${body.data.cpu} cores`;
-                    document.getElementById("ramAvailability").innerText = `${body.data.ram} GB`;
+                    document.getElementById("cpuAvailability").innerText = `${reqBody.data.cpu} cores`;
+                    document.getElementById("ramAvailability").innerText = `${reqBody.data.ram} GB`;
                     document.getElementById("addressList").style.display = "block";
-                    const addressListHtml = body.data.addresses.map((address, index) => {
+                    const addressListHtml = reqBody.data.addresses.map((address, index) => {
                         return `<p><span>${address}</span></p>`;
                     }).join("");
                     document.getElementById("addressItems").innerHTML = addressListHtml;
-                    displayAlert("system-info-success", `${body.message}`);
+                    displayAlert("system-info-success", `${reqBody.message}`);
                 })
                 .catch((error) => {
                     displayAlert("system-info-error", `${error.message}`);
