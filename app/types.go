@@ -9,6 +9,10 @@ type ApiDeployRequest struct {
 	Arguments []string `json:"arguments"`
 }
 
+type ApiAddPeerRequest struct {
+	Address string `json:"address"`
+}
+
 type DeployRequest struct {
 	SourcePeerID peer.ID  `json:"sourcePeerID"`
 	SourceAddrs  []string `json:"sourceAddrs"`

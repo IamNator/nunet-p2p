@@ -28,7 +28,7 @@ func main() {
 		panic(err)
 	}
 	defer host.Close()
-	
+
 	fmt.Println("Host ID:", host.ID())
 
 	app.DiscoverPeers(ctx, host, topicName)
@@ -55,5 +55,6 @@ func main() {
 	go app.HandleDeploymentRequest(ctx, host, sub)
 
 	// Handle user input
-	app.HandleUserInput(ctx, port, host, deploymentTopic)
+	api := app.NewApi(host, deploymentTopic)
+	api.Run(port)
 }

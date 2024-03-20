@@ -8,7 +8,6 @@ import (
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub" // for message broadcasting
 	"github.com/libp2p/go-libp2p/core/host"
-	"github.com/libp2p/go-libp2p/core/peer"
 )
 
 func HandleDeploymentRequest(ctx context.Context, host host.Host, sub *pubsub.Subscription) {
@@ -19,7 +18,7 @@ func HandleDeploymentRequest(ctx context.Context, host host.Host, sub *pubsub.Su
 			fmt.Println("Error reading message:", err)
 			continue
 		}
-		if IsSender(ctx, host, msg.GetFrom()) {
+		if host.ID() == msg.GetFrom() { // Ignore messages from self
 			continue
 		}
 		processDeploymentRequest(msg.GetData())
@@ -36,8 +35,4 @@ func processDeploymentRequest(data []byte) {
 	// ... (container deployment logic using program and arguments)
 	fmt.Printf("Deploying container: %s %s from %s\n", request.Program, strings.Join(request.Arguments, " "), request.SourcePeerID)
 
-}
-
-func IsSender(ctx context.Context, host host.Host, sender peer.ID) bool {
-	return host.ID() == sender
 }

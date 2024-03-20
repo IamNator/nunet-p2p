@@ -11,7 +11,26 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	drouting "github.com/libp2p/go-libp2p/p2p/discovery/routing"
 	dutil "github.com/libp2p/go-libp2p/p2p/discovery/util"
+	"github.com/multiformats/go-multiaddr"
 )
+
+func AddPeer(ctx context.Context, addr string, h host.Host) error {
+	ma, err := multiaddr.NewMultiaddr(addr)
+	if err != nil {
+		return fmt.Errorf("error creating multiaddr: %s", err)
+	}
+
+	peerinfo, err := peer.AddrInfoFromP2pAddr(ma)
+	if err != nil {
+		return fmt.Errorf("error getting peerinfo: %s", err)
+	}
+
+	if err := h.Connect(ctx, *peerinfo); err != nil {
+		return fmt.Errorf("error connecting to peer: %s", err)
+	}
+
+	return nil
+}
 
 func DiscoverPeers(ctx context.Context, h host.Host, topicName string) error {
 	kademliaDHT, err := initDHT(ctx, h)
