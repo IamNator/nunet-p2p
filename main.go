@@ -4,19 +4,25 @@ import (
 	"context"
 	"fmt"
 	"nunet/app"
+	"os"
 
 	"github.com/libp2p/go-libp2p"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 )
 
 const (
-	topicName = "container-deployment" // Topic for deployment messages
-	port      = 8080                   // REST API port
+	defaultTopicName = "container-deployment" // Topic for deployment messages
+	port             = 8080                   // REST API port
 )
 
 func main() {
 	// Create a new context
 	ctx := context.Background()
+
+	var TopicName string = defaultTopicName
+	if topic := os.Getenv("TOPIC_NAME"); topic != "" {
+		TopicName = topic
+	}
 
 	// Create a new libp2p host
 	host, err := libp2p.New(libp2p.FallbackDefaults)
@@ -32,7 +38,7 @@ func main() {
 	}
 
 	// Discover peers for peer-to-peer communication
-	if err := app.DiscoverPeers(ctx, host, topicName); err != nil {
+	if err := app.DiscoverPeers(ctx, host, TopicName); err != nil {
 		panic(fmt.Errorf("failed to discover peers: %w", err))
 	}
 
@@ -43,7 +49,7 @@ func main() {
 	}
 
 	// Join the deployment topic
-	deploymentTopic, err := pubSub.Join(topicName)
+	deploymentTopic, err := pubSub.Join(TopicName)
 	if err != nil {
 		panic(fmt.Errorf("failed to join deployment topic: %w", err))
 	}

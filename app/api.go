@@ -58,11 +58,17 @@ func (a api) handleHealthRequest(c *gin.Context) {
 		})
 		return
 	}
+
+	var address []string
+	for _, addr := range a.Host.Addrs() {
+		address = append(address, fmt.Sprintf("%s/p2p/%s", addr, a.Host.ID().String()))
+	}
 	c.JSON(http.StatusOK, gin.H{
-		"status": "ok",
-		"id":     a.Host.ID().String(),
-		"cpu":    cpuAvailable,
-		"ram":    ramAvailable,
+		"status":    "ok",
+		"id":        a.Host.ID().String(),
+		"addresses": address,
+		"cpu":       cpuAvailable,
+		"ram":       ramAvailable,
 	})
 }
 
