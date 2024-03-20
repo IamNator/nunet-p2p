@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	defaultTopicName = "container-deployment" // Topic for deployment messages
-	defaultPort      = 8080                   // REST API port..
+	defaultTopicName = "container-deployment-12223" // Topic for deployment messages
+	defaultPort      = 8080                         // REST API port..
 )
 
 func main() {
