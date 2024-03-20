@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"nunet/app"
 	"os"
+	"strconv"
 
 	"github.com/libp2p/go-libp2p"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -12,7 +13,7 @@ import (
 
 const (
 	defaultTopicName = "container-deployment" // Topic for deployment messages
-	port             = 8080                   // REST API port
+	defaultPort      = 8080                   // REST API port
 )
 
 func main() {
@@ -65,5 +66,12 @@ func main() {
 
 	// Create a new REST API and run it
 	api := app.NewApi(host, deploymentTopic)
+	var port int = defaultPort
+	if p := os.Getenv("PORT"); p != "" {
+		np, err := strconv.Atoi(p)
+		if err == nil {
+			port = np
+		}
+	}
 	api.Run(port)
 }
