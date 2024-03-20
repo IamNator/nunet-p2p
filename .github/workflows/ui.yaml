@@ -1,0 +1,20 @@
+name: Deploy UI
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  quality-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./public
+
+
+
