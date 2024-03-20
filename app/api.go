@@ -60,6 +60,7 @@ func (a api) handleHealthRequest(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"status": "ok",
+		"id":     a.Host.ID().String(),
 		"cpu":    cpuAvailable,
 		"ram":    ramAvailable,
 	})

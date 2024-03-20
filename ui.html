@@ -1,19 +1,24 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Container Deployer/Manager</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             margin: 20px;
         }
+
         label {
             display: block;
             margin-bottom: 5px;
+            padding: 5px;
         }
-        input, textarea {
+
+        input,
+        textarea {
             width: 100%;
             padding: 8px;
             margin-bottom: 10px;
@@ -22,64 +27,243 @@
             box-sizing: border-box;
             resize: vertical;
         }
+
+
         button {
-            background-color: #4CAF50;
+            background-color: #4caf50;
             color: white;
             padding: 10px 20px;
             border: none;
             border-radius: 4px;
             cursor: pointer;
+            padding: auto;
         }
+
+        .button-processing {
+            background-color: #ccc;
+            /* Change to desired color */
+            cursor: not-allowed;
+            animation: pulse 1s infinite alternate;
+            /* Animate the button */
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+
+            100% {
+                transform: scale(1.1);
+            }
+        }
+
         button:hover {
             background-color: #45a049;
         }
+
+        .system-info {
+            margin-top: 20px;
+        }
     </style>
 </head>
+
 <body>
-    <h2>Container Deployer/Manager</h2>
-    <form id="deployForm" onSubmit="deployContainer()">
-        <label for="host">Host Maching:</label>
-        <input type="text" id="host" name="host" placeholder="Enter Host" value="http://localhost:8080" required>
-        <label for="program">Program Name:</label>
-        <input type="text" id="program" name="program" placeholder="Enter program name" value="go" required>
-        <label for="arguments">Arguments:</label>
-        <textarea id="arguments" name="arguments" placeholder="Enter arguments (comma-separated)" value="run main.go"></textarea>
-        <button type="submit" >Deploy Container</button>
-    </form>
+    <div>
+        <div>
+            <h2>Connect to Network</h2>
+            <form id="fetchSystemInfo" onSubmit="fetchSystemInfo(event)">
+                <label for="host">Host Machine:</label>
+                <input type="text" id="host" name="host" placeholder="Enter Host" value="http://localhost:8080"
+                    required />
+                <div class="system-info">
+                    <p id="id" style="display: none;"><span id="id">Loading...</span></p>
+                    <p>CPU Available: <span id="cpuAvailability">Loading...</span></p>
+                    <p>RAM Available: <span id="ramAvailability">Loading...</span></p>
+                </div>
+                <div>
+                    <p id="system-info-success" style="display: none;">System information fetched successfully!</p>
+                    <p id="system-info-error" style="display: none;">Failed to fetch system information. Please check
+                        the
+                        URL and try again.</p>
+                </div>
+                <button id="fetchSystemInfoButton" type="submit">Connect</button>
+            </form>
+        </div>
+
+        <div>
+            <h2>Add Peers</h2>
+            <form id="addPeerForm" onSubmit="addPeer(event)">
+                <label for="peerAddress">Peer Address:</label>
+                <input type="text" id="peerAddress" name="peerAddress" placeholder="Enter Peer Address" required />
+                <p id="peer-success" style="display: none;">Peer added successfully!</p>
+                <p id="peer-error" style="display: none;">Failed to add peer. Please check the URL and try again.</p>
+                <button id="addPeerFormButton" type="submit">Add Peer</button>
+            </form>
+        </div>
+
+        <div>
+            <h2>Deploy Job</h2>
+            <form id="deployForm" onSubmit="deployContainer(event)">
+                <div class="">
+                    <label for="program">Program Name:</label>
+                    <input type="text" id="program" name="program" placeholder="Enter program name" value="go"
+                        required />
+                </div>
+                <div class="">
+                    <label for="arguments">Arguments:</label>
+                    <textarea id="arguments" name="arguments" placeholder="Enter arguments (comma-separated)"
+                        value="run,main.go"></textarea>
+                </div>
+                <p id="deploy-success" style="display: none;">Container deployed successfully!</p>
+                <p id="deploy-error" style="display: none;">Failed to deploy container. Please check the URL and try
+                    again.</p>
+                <button id="deployFormButton" type="submit">Deploy Container</button>
+            </form>
+        </div>
+    </div>
 
     <script>
-        function deployContainer() {
-            const url = document.getElementById('host').value+"/deploy";
-            const program = document.getElementById('program').value;
-            const arguments = document.getElementById('arguments').value.split(',');
+
+        // Function to toggle processing state of button
+        function toggleButtonProcessing(buttonId, processing) {
+            const button = document.getElementById(buttonId);
+            const initialText = buttonId === "fetchSystemInfoButton" ?
+                "Connect" : buttonId === "addPeerFormButton" ? "Add Peer" : "Deploy Container";
+            if (processing) {
+                button.classList.add("button-processing");
+                button.innerText = "Processing...";
+                button.setAttribute("disabled", "true");
+            } else {
+                button.classList.remove("button-processing");
+                button.innerText = initialText;
+                button.removeAttribute("disabled");
+            }
+        }
+
+        // display alert message
+        function displayAlert(id, message) {
+            document.getElementById(id).style.display = "block";
+            document.getElementById(id).innerText = `${message}`;
+
+            //add timeout to hide the alert message
+            setTimeout(() => {
+                document.getElementById(id).style.display = "none";
+                document.getElementById(id).innerText = "";
+            }, 9000);
+        }
+
+        // Function to fetch system information
+        function fetchSystemInfo(event) {
+            event.preventDefault(); // Prevent form submission
+            const host = document.getElementById("host").value;
+            toggleButtonProcessing("fetchSystemInfoButton", true);
+            fetch(`${host}/health`)
+                .then((response) => {
+                    if (!response.ok) {
+                        return response.json().then(data => {
+                            throw new Error(data.details);
+                        }).catch(error => {
+                            throw new Error(`${error}`);
+                        });
+                    }
+                    return response.json();
+                })
+                .then((data) => {
+                    document.getElementById("id").style.display = "block";
+                    document.getElementById("id").innerText = `${data.id}`;
+                    document.getElementById("cpuAvailability").innerText = `${data.cpu} cores`;
+                    document.getElementById("ramAvailability").innerText = `${data.ram} GB`;
+                    localStorage.setItem("host", host);
+                    displayAlert("system-info-success", `${data.message}`);
+                })
+                .catch((error) => {
+                    displayAlert("system-info-error", `${error.message}`);
+                    console.error(`There was a problem with the fetch operation: ${error}`);
+                }).finally(() => {
+                    toggleButtonProcessing("fetchSystemInfoButton", false);
+                });
+        }
+
+        // Function to add peer
+        function addPeer(event) {
+            event.preventDefault(); // Prevent form submission
+            const host = localStorage.getItem("host");
+            const url = `${host}/peer`;
+
+            const peerAddress = document.getElementById("peerAddress").value;
+            const data = {
+                address: peerAddress,
+            };
+            toggleButtonProcessing("addPeerFormButton", true);
+            fetch(url, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(data),
+            })
+                .then((response) => {
+                    if (!response.ok) {
+                        return response.json().then(data => {
+                            throw new Error(data.details);
+                        }).catch(error => {
+                            throw new Error(`${error.message}`);
+                        });
+                    }
+                    return response.json();
+                })
+                .then((data) => {
+                    displayAlert("peer-success", `${data.message}`);
+                })
+                .catch((error) => {
+                    displayAlert("peer-error", `${error.message}`);
+                }).finally(() => {
+                    toggleButtonProcessing("addPeerFormButton", false);
+                });
+        }
+
+        // Function to deploy container
+        function deployContainer(event) {
+            event.preventDefault(); // Prevent form submission
+            const program = document.getElementById("program").value;
+            const host = localStorage.getItem("host");
 
             const data = {
                 program: program,
-                arguments: arguments
+                arguments: document.getElementById("arguments").value,
             };
 
-            fetch(url, {
-                method: 'POST',
+            toggleButtonProcessing("deployFormButton", true);
+            fetch(host + `/deploy`, {
+                method: "POST",
                 headers: {
-                    'Content-Type': 'application/json'
+                    "Content-Type": "application/json",
                 },
-                body: JSON.stringify(data)
+                body: JSON.stringify(data),
             })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.json();
-            })
-            .then(data => {
-                console.log(data);
-                alert('Container deployed successfully!');
-            })
-            .catch(error => {
-                console.error('There was a problem with the fetch operation:', error);
-                alert('Failed to deploy container. Please check the URL and try again.');
-            });
+                .then((response) => {
+                    if (!response.ok) {
+                        return response.json().then(data => {
+                            throw new Error(data.details);
+                        }).catch(error => {
+                            throw new Error(`${error.message}`);
+                        });
+                    }
+                    return response.json();
+                })
+                .then((data) => {
+                    console.log(data);
+                    displayAlert("deploy-success", `${data.message}`);
+                })
+                .catch((error) => {
+                    console.error(`There was a problem with the fetch operation: ${error}`);
+                    displayAlert("deploy-error", `${error}`);
+                }).finally(() => {
+                    toggleButtonProcessing("deployFormButton", false);
+                });
         }
+
     </script>
 </body>
+
 </html>
