@@ -294,9 +294,10 @@
             const program = document.getElementById("program").value;
             const host = localStorage.getItem("host");
 
+            const argument = document.getElementById("arguments").value;
             const data = {
                 program: program,
-                arguments: document.getElementById("arguments").value,
+                arguments: argument.split(","),
             };
 
             toggleButtonProcessing("deployFormButton", true);
