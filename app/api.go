@@ -63,12 +63,18 @@ func (a api) handleHealthRequest(c *gin.Context) {
 	for _, addr := range a.Host.Addrs() {
 		address = append(address, fmt.Sprintf("%s/p2p/%s", addr, a.Host.ID().String()))
 	}
+
+	connectedPeers := a.Host.Network().Peers()
+
 	c.JSON(http.StatusOK, gin.H{
 		"status":  "success",
 		"message": "Healthy",
 		"data": gin.H{
 			"id":        a.Host.ID().String(),
 			"addresses": address,
+			"peers":     connectedPeers,
+			"num_peers": len(connectedPeers),
+			"network":   "libp2p",
 			"cpu":       cpuAvailable,
 			"ram":       ramAvailable,
 		},
