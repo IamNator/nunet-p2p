@@ -246,7 +246,7 @@
                 peerItems.innerHTML = "<p>No peers connected</p>";
             } else {
                 const peerListHtml = list.map((peer, index) => {
-                    return `<p><span>${index}. ${peer}</span></p>`;
+                    return `<p><span>${index+1}. ${peer}</span></p>`;
                 }).join("");
                 peerItems.innerHTML = peerListHtml;
             }
@@ -328,11 +328,11 @@
                 })
                 .then((data) => {
                     displayAlert("peer-success", `${data.message}`);
-                    fetchSystemInfo(event);
                 })
                 .catch((error) => {
                     displayAlert("peer-error", `${error.message}`);
                 }).finally(() => {
+                    fetchSystemInfo(event);
                     toggleButtonProcessing("addPeerFormButton", false);
                 });
         }
