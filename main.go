@@ -25,8 +25,8 @@ func main() {
 		TopicName = topic
 	}
 
-	// Create a new libp2p host
-	host, err := libp2p.New(libp2p.FallbackDefaults)
+	// Create a new libp2p host on tcp port 4001
+	host, err := libp2p.New(libp2p.ListenAddrStrings("/ip4/0.0.0.0/tcp/9000"))
 	if err != nil {
 		panic(fmt.Errorf("failed to create libp2p host: %w", err))
 	}
