@@ -20,6 +20,7 @@ func AddPeer(ctx context.Context, addr string, h host.Host) error {
 		return fmt.Errorf("error creating multiaddr: %s", err)
 	}
 
+	fmt.Printf("Adding Peer address: %s\n", ma)
 	peerinfo, err := peer.AddrInfoFromP2pAddr(ma)
 	if err != nil {
 		return fmt.Errorf("error getting peerinfo: %s", err)
@@ -29,6 +30,7 @@ func AddPeer(ctx context.Context, addr string, h host.Host) error {
 		return fmt.Errorf("error connecting to peer: %s", err)
 	}
 
+	fmt.Printf("Connected to peer: %s\n", peerinfo.ID)
 	return nil
 }
 
