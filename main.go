@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	defaultTopicName = "container-deployment-12223" // Topic for deployment messages
+	defaultTopicName = "container-deployment-12223-nnddd" // Topic for deployment messages
 	defaultPort      = 8080                         // REST API port..
 )
 
