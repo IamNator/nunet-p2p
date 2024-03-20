@@ -46,6 +46,9 @@
             animation: pulse 1s infinite alternate;
             /* Animate the button */
         }
+        .button-processing:hover {
+            background-color:  #ccc;
+        }
 
         @keyframes pulse {
             0% {
@@ -64,6 +67,30 @@
         .system-info {
             margin-top: 20px;
         }
+
+        .address-list {
+            margin-top: 10px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+
+        .address-item {
+            margin-bottom: 5px;
+        }
+
+        .expand-button {
+            margin-top: 5px;
+            cursor: pointer;
+            color: blue;
+        }
+
+        .expanded {
+            max-height: none;
+            overflow-y: hidden;
+        }
     </style>
 </head>
 
@@ -75,19 +102,27 @@
                 <label for="host">Host Machine:</label>
                 <input type="text" id="host" name="host" placeholder="Enter Host" value="http://localhost:8080"
                     required />
-                <div class="system-info">
-                    <p id="id" style="display: none;"><span id="id">Loading...</span></p>
-                    <p>CPU Available: <span id="cpuAvailability">Loading...</span></p>
-                    <p>RAM Available: <span id="ramAvailability">Loading...</span></p>
-                </div>
-                <div>
-                    <p id="system-info-success" style="display: none;">System information fetched successfully!</p>
-                    <p id="system-info-error" style="display: none;">Failed to fetch system information. Please check
-                        the
-                        URL and try again.</p>
-                </div>
                 <button id="fetchSystemInfoButton" type="submit">Connect</button>
             </form>
+            <div class="system-info">
+                <p>CPU Available: <span id="cpuAvailability">Loading...</span></p>
+                <p>RAM Available: <span id="ramAvailability">Loading...</span></p>
+
+                <div id="addressList" style="display: none;">
+                        <p><strong>Listening on:</strong></p>
+                        <div class="address-list" id="addressBox">
+                            <div id="addressItems"></div>
+                        </div>
+                        <div id="expandButton" class="expand-button" onclick="toggleAddressExpand()">Expand</div>
+                </div>
+            </div>
+            <div>
+                <p id="system-info-success" style="display: none;">System information fetched successfully!</p>
+                <p id="system-info-error" style="display: none;">Failed to fetch system information. Please check
+                    the
+                    URL and try again.</p>
+            </div>
+
         </div>
 
         <div>
@@ -124,6 +159,21 @@
 
     <script>
 
+
+        // Function to toggle the expandable address list
+        function toggleAddressExpand() {
+            const addressList = document.getElementById("addressBox");
+            const expandButton = document.getElementById("expandButton");
+
+            if (addressList.classList.contains("expanded")) {
+                addressList.classList.remove("expanded");
+                expandButton.innerText = "Expand";
+            } else {
+                addressList.classList.add("expanded");
+                expandButton.innerText = "Collapse";
+            }
+        }
+
         // Function to toggle processing state of button
         function toggleButtonProcessing(buttonId, processing) {
             const button = document.getElementById(buttonId);
@@ -152,11 +202,21 @@
             }, 9000);
         }
 
+        function hideAlert(id) {
+            document.getElementById(id).style.display = "none";
+        }
+
         // Function to fetch system information
         function fetchSystemInfo(event) {
             event.preventDefault(); // Prevent form submission
             const host = document.getElementById("host").value;
+            document.getElementById("addressList").style.display = "none";
+            document.getElementById("addressItems").innerHTML = "";
+            document.getElementById("cpuAvailability").innerText = "Loading...";
+            document.getElementById("ramAvailability").innerText = "Loading...";
             toggleButtonProcessing("fetchSystemInfoButton", true);
+            hideAlert("system-info-success");
+            hideAlert("system-info-error");
             fetch(`${host}/health`)
                 .then((response) => {
                     if (!response.ok) {
@@ -168,13 +228,16 @@
                     }
                     return response.json();
                 })
-                .then((data) => {
-                    document.getElementById("id").style.display = "block";
-                    document.getElementById("id").innerText = `${data.id}`;
-                    document.getElementById("cpuAvailability").innerText = `${data.cpu} cores`;
-                    document.getElementById("ramAvailability").innerText = `${data.ram} GB`;
+                .then((body) => {
                     localStorage.setItem("host", host);
-                    displayAlert("system-info-success", `${data.message}`);
+                    document.getElementById("cpuAvailability").innerText = `${body.data.cpu} cores`;
+                    document.getElementById("ramAvailability").innerText = `${body.data.ram} GB`;
+                    document.getElementById("addressList").style.display = "block";
+                    const addressListHtml = body.data.addresses.map((address, index) => {
+                        return `<p><span>${address}</span></p>`;
+                    }).join("");
+                    document.getElementById("addressItems").innerHTML = addressListHtml;
+                    displayAlert("system-info-success", `${body.message}`);
                 })
                 .catch((error) => {
                     displayAlert("system-info-error", `${error.message}`);
@@ -187,14 +250,17 @@
         // Function to add peer
         function addPeer(event) {
             event.preventDefault(); // Prevent form submission
+            const peerAddress = document.getElementById("peerAddress").value;
             const host = localStorage.getItem("host");
             const url = `${host}/peer`;
 
-            const peerAddress = document.getElementById("peerAddress").value;
+            hideAlert("peer-success");
+            hideAlert("peer-error");
+            toggleButtonProcessing("addPeerFormButton", true);
+
             const data = {
                 address: peerAddress,
             };
-            toggleButtonProcessing("addPeerFormButton", true);
             fetch(url, {
                 method: "POST",
                 headers: {
@@ -234,6 +300,8 @@
             };
 
             toggleButtonProcessing("deployFormButton", true);
+            hideAlert("deploy-success");
+            hideAlert("deploy-error");
             fetch(host + `/deploy`, {
                 method: "POST",
                 headers: {
