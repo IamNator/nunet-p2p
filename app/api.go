@@ -32,8 +32,8 @@ func (a api) Run(port int) {
 	router.Use(pkg.CorsMiddleware()) // attach cors middleware
 
 	router.GET("/health", a.handleHealthRequest)
-	router.POST("/deploy", a.handleDeploymentRequest)
 	router.POST("/peer", a.handleAddPeerRequest)
+	router.POST("/deploy", a.handleDeploymentRequest)
 
 	// Start listening for incoming connections
 	fmt.Println("Listening for deployment requests...")
