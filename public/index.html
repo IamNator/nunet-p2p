@@ -172,6 +172,23 @@
 
     <script>
 
+        // generate random number
+        const random = () => Math.floor(Math.random() * 1000);
+        const seed = random();
+
+        // function to store data in local storage
+        function storeData(key, value) {
+            const alteredKey = `${key}-${seed}`;
+            localStorage.setItem(alteredKey, value);
+        }
+
+        // function to get data from local storage
+        function getData(key) {
+            const alteredKey = `${key}-${seed}`;
+            return localStorage.getItem(alteredKey);
+        }
+
+
 
         // Function to toggle the expandable address list
         function toggleAddressExpand() {
@@ -276,7 +293,7 @@
                     return response.json();
                 })
                 .then((reqBody) => {
-                    localStorage.setItem("host", host);
+                    storeData("host", host);
                     document.getElementById("cpuAvailability").innerText = `${reqBody.data.cpu} cores`;
                     document.getElementById("ramAvailability").innerText = `${reqBody.data.ram} GB`;
                     document.getElementById("addressList").style.display = "block";
@@ -299,7 +316,7 @@
         function addPeer(event) {
             event.preventDefault(); // Prevent form submission
             const peerAddress = document.getElementById("peerAddress").value;
-            const host = localStorage.getItem("host");
+            const host = getData("host");
             const url = `${host}/peer`;
 
             hideAlert("peer-success");
@@ -341,7 +358,7 @@
         function deployContainer(event) {
             event.preventDefault(); // Prevent form submission
             const program = document.getElementById("program").value;
-            const host = localStorage.getItem("host");
+            const host = getData("host");
 
             const argument = document.getElementById("arguments").value;
             const data = {
