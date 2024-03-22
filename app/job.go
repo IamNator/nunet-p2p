@@ -74,7 +74,7 @@ func runCmd(name string, args ...string) ([]string, int, error) {
 			buf := make([]byte, 1024)
 			n, err := stdout.Read(buf)
 			if n > 0 {
-				outputs = append(outputs, "Info :"+strings.TrimSpace(string(buf[:n])))
+				outputs = append(outputs, "Info : "+strings.TrimSpace(string(buf[:n])))
 			}
 			if err != nil {
 				break
@@ -88,7 +88,7 @@ func runCmd(name string, args ...string) ([]string, int, error) {
 			buf := make([]byte, 1024)
 			n, err := stderr.Read(buf)
 			if n > 0 {
-				outputs = append(outputs, "Error :"+strings.TrimSpace(string(buf[:n])))
+				outputs = append(outputs, "Error : "+strings.TrimSpace(string(buf[:n])))
 			}
 			if err != nil {
 				break
