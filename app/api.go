@@ -26,7 +26,7 @@ func NewApi(host host.Host, deploymentTopic *pubsub.Topic) *api {
 	}
 }
 
-func (a api) Run(port int) {
+func (a api) Run(port int) error {
 
 	router := gin.Default()
 	router.Use(pkg.CorsMiddleware()) // attach cors middleware
@@ -44,8 +44,10 @@ retry:
 			fmt.Printf("Port %d already in use, retrying with port %d\n", port-1, port)
 			goto retry
 		}
-		println("Error starting server:", err.Error())
+		return err
 	}
+
+	return nil
 }
 
 func (a api) handleHealthRequest(c *gin.Context) {
