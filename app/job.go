@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+	"sync"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/host"
@@ -51,25 +52,60 @@ func runCmd(name string, args ...string) ([]string, int, error) {
 	fmt.Printf("Executing command: %s %s\n", name, strings.Join(args, " "))
 	cmd := exec.Command(name, args...)
 
-	err := cmd.Start()
-	if err != nil {
-		return nil, 0, fmt.Errorf("error starting command: %w", err)
-	}
-
 	// get the outputs
 	var outputs []string
-	for {
-		output, err := cmd.CombinedOutput()
-		if err != nil {
-			break
+
+	// Attach the stdout and stderr pipes
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, 0, fmt.Errorf("error attaching stdout pipe: %w", err)
+	}
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return nil, 0, fmt.Errorf("error attaching stderr pipe: %w", err)
+	}
+
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+	// get the outputs
+	go func() {
+		defer wg.Done()
+		for {
+			buf := make([]byte, 1024)
+			n, err := stdout.Read(buf)
+			if n > 0 {
+				outputs = append(outputs, "Info :"+strings.TrimSpace(string(buf[:n])))
+			}
+			if err != nil {
+				break
+			}
 		}
-		outputs = append(outputs, string(output))
+	}()
+
+	go func() {
+		defer wg.Done()
+		for {
+			buf := make([]byte, 1024)
+			n, err := stderr.Read(buf)
+			if n > 0 {
+				outputs = append(outputs, "Error :"+strings.TrimSpace(string(buf[:n])))
+			}
+			if err != nil {
+				break
+			}
+		}
+	}()
+
+	if err := cmd.Start(); err != nil {
+		return nil, 0, fmt.Errorf("error starting command: %w", err)
 	}
 
 	// Wait for the command to finish
 	if err := cmd.Wait(); err != nil {
 		return outputs, 0, fmt.Errorf("error waiting for command to finish: %w", err)
 	}
+
+	wg.Wait()
 
 	fmt.Println("Command executed successfully")
 	return outputs, cmd.ProcessState.Pid(), nil
@@ -133,7 +169,7 @@ func HandleDeploymentResponse(ctx context.Context, host host.Host, sub *pubsub.S
 		}
 
 		if response.Success {
-			fmt.Printf("Deployment successful. PID: %d\n, outputs: %v\n", response.PID, strings.Join(response.Outputs, ", "))
+			fmt.Printf("Deployment successful. PID: %d\n, outputs: %v \n", response.PID, strings.Join(response.Outputs, ","))
 		} else {
 			fmt.Println("Deployment failed")
 		}

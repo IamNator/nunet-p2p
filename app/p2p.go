@@ -70,6 +70,8 @@ func refreshPeers(routingDiscovery *drouting.RoutingDiscovery, h host.Host, topi
 			}
 		}
 
+		time.Sleep(time.Second)
+
 		if anyConnected {
 			fmt.Println("Peer discovery complete")
 			time.Sleep(time.Minute * 10) // Adjust peer discovery interval as needed
