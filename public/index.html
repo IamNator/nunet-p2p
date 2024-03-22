@@ -159,13 +159,13 @@
             <form id="deployForm" onSubmit="deployContainer(event)">
                 <div class="">
                     <label for="program">Program Name:</label>
-                    <input type="text" id="program" name="program" placeholder="Enter program name" value="go"
+                    <input type="text" id="program" name="program" placeholder="Enter program name" value="echo"
                         required />
                 </div>
                 <div class="">
                     <label for="arguments">Arguments:</label>
-                    <textarea id="arguments" name="arguments" placeholder="Enter arguments (comma-separated)"
-                        value="run,main.go"></textarea>
+                    <input type="text" id="arguments" name="arguments" placeholder="Enter arguments (comma-separated)"
+                        value="hello"></input>
                 </div>
                 <p id="deploy-success" style="display: none;">Container deployed successfully!</p>
                 <p id="deploy-error" style="display: none;">Failed to deploy container. Please check the URL and try

@@ -29,4 +29,6 @@ type DeployResponse struct {
 	PID          int      `json:"pid"`
 	TargetPeerID string   `json:"target_peer_id"`
 	TargetAddrs  []string `json:"target_addrs"`
+
+	Outputs []string `json:"outputs"`
 }
