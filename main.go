@@ -66,18 +66,18 @@ func main() {
 		log.Fatal("failed to subscribe to deployment topic: %w", err)
 	}
 
-	deploymentResponseTopic, err := pubSub.Join(topicName + "-response")
+	responseTopic, err := pubSub.Join(topicName + "-response")
 	if err != nil {
 		log.Fatal("failed to join deployment response topic: %w", err)
 	}
 
 	// Subscribe to deployment response topic
-	responseSub, err := deploymentResponseTopic.Subscribe()
+	responseSub, err := responseTopic.Subscribe()
 	if err != nil {
 		log.Fatal("failed to subscribe to deployment response topic: %w", err)
 	}
 
-	jobs := app.NewJob(host, deploymentTopic, deploymentSub, deploymentResponseTopic, responseSub)
+	jobs := app.NewJob(host, deploymentTopic, deploymentSub, responseTopic, responseSub)
 	go jobs.HandleDeploymentRequest(ctx)
 	go jobs.HandleDeploymentResponse(ctx)
 

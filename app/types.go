@@ -1,12 +1,28 @@
 package app
 
+import "fmt"
+
 type ApiDeployRequest struct {
 	Program   string   `json:"program"`
 	Arguments []string `json:"arguments"`
 }
 
+func (a ApiDeployRequest) Validate() error {
+	if a.Program == "" {
+		return fmt.Errorf("program is required")
+	}
+	return nil
+}
+
 type ApiAddPeerRequest struct {
 	Address string `json:"address"`
+}
+
+func (a ApiAddPeerRequest) Validate() error {
+	if a.Address == "" {
+		return fmt.Errorf("address is required")
+	}
+	return nil
 }
 
 type DeployRequest struct {

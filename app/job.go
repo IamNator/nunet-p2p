@@ -40,7 +40,7 @@ func NewJob(
 }
 
 func (j *Job) ListPeers() []peer.ID {
-	return j.Host.Peerstore().Peers()
+	return j.DeploymentTopic.ListPeers()
 }
 
 func (j *Job) PublishDeploymentRequest(ctx context.Context, request DeployRequest) error {

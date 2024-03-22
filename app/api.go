@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -12,6 +13,7 @@ import (
 	"nunet/pkg"
 )
 
+// PeerOperations defines the functionalities for peer management
 type PeerOperations interface {
 	AddPeer(ctx context.Context, addr string) error
 	DiscoverPeers(ctx context.Context, topicName string) error
@@ -19,6 +21,7 @@ type PeerOperations interface {
 	PeerID() peer.ID
 }
 
+// JobOperations defines the functionalities for job management
 type JobOperations interface {
 	PublishDeploymentRequest(ctx context.Context, request DeployRequest) error
 	HandleDeploymentRequest(ctx context.Context)
@@ -26,11 +29,13 @@ type JobOperations interface {
 	ListPeers() []peer.ID
 }
 
+// api struct holds references to PeerOperations and JobOperations services
 type api struct {
 	P2P PeerOperations
 	Job JobOperations
 }
 
+// NewApi creates a new instance of the api struct
 func NewApi(p2p PeerOperations, job JobOperations) *api {
 	return &api{
 		P2P: p2p,
@@ -38,8 +43,8 @@ func NewApi(p2p PeerOperations, job JobOperations) *api {
 	}
 }
 
-func (a api) Run(port int) error {
-
+// Run starts the api server and listens for incoming connections
+func (a *api) Run(port int) error {
 	router := gin.Default()
 	router.Use(pkg.CorsMiddleware()) // attach cors middleware
 
@@ -47,12 +52,12 @@ func (a api) Run(port int) error {
 	router.POST("/peer", a.handleAddPeerRequest)
 	router.POST("/deploy", a.handleDeploymentRequest)
 
-	// Start listening for incoming connections
+	// Start listening for incoming connections with port handling logic
 	fmt.Println("Listening for deployment requests...")
 retry:
 	if err := http.ListenAndServe(fmt.Sprintf(":%d", port), router); err != nil {
 		if strings.Contains(err.Error(), "already in use") {
-			port = port + 1
+			port++
 			fmt.Printf("Port %d already in use, retrying with port %d\n", port-1, port)
 			goto retry
 		}
@@ -62,7 +67,8 @@ retry:
 	return nil
 }
 
-func (a api) handleHealthRequest(c *gin.Context) {
+// handleHealthRequest returns health information about the node
+func (a *api) handleHealthRequest(c *gin.Context) {
 	cpuAvailable, ramAvailable, err := pkg.GetComputeAvailable()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -89,10 +95,12 @@ func (a api) handleHealthRequest(c *gin.Context) {
 	})
 }
 
-func (a api) handleDeploymentRequest(c *gin.Context) {
-
+// handleDeploymentRequest handles incoming deployment requests
+func (a *api) handleDeploymentRequest(c *gin.Context) {
 	var request ApiDeployRequest
-	if err := c.BindJSON(&request); err != nil {
+
+	// Decode request body and handle bad request
+	if err := json.NewDecoder(c.Request.Body).Decode(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"status":  "error",
 			"error":   "Invalid request",
@@ -101,7 +109,17 @@ func (a api) handleDeploymentRequest(c *gin.Context) {
 		return
 	}
 
-	//select a random peer that is listening on thesame topic to deploy the program
+	// validate request
+	if err := request.Validate(); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"status":  "error",
+			"error":   "Invalid request",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	// Check for available peers and handle no peers scenario
 	peers := a.Job.ListPeers()
 	if len(peers) == 0 {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -138,6 +156,7 @@ func (a api) handleDeploymentRequest(c *gin.Context) {
 
 func (a api) handleAddPeerRequest(c *gin.Context) {
 	var request ApiAddPeerRequest
+	// Decode request body and handle bad request
 	if err := c.BindJSON(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"status":  "error",
@@ -147,6 +166,17 @@ func (a api) handleAddPeerRequest(c *gin.Context) {
 		return
 	}
 
+	// validate request
+	if err := request.Validate(); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"status":  "error",
+			"error":   "Invalid request",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	// Add peer to the network
 	if err := a.P2P.AddPeer(context.Background(), request.Address); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"status":  "error",
