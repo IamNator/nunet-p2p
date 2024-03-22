@@ -30,27 +30,30 @@ func main() {
 	}
 
 	// Create a new libp2p host
-	host, err := libp2p.New(libp2p.FallbackDefaults)
+	node, err := libp2p.New(
+		libp2p.FallbackDefaults,
+	)
 	if err != nil {
 		log.Fatal("failed to create libp2p host: %w", err)
 	}
-	defer host.Close()
+	defer node.Close()
 
 	// Print host information
-	printHostInfo(host)
+	printHostInfo(node)
 
 	// Create a new P2P instance
-	p2p, err := app.NewP2P(host)
+	p2p, err := app.NewP2P(node)
 	if err != nil {
 		log.Fatal("failed to create P2P instance: %w", err)
 	}
+
 	// Discover peers for communication
 	if err := p2p.DiscoverPeers(ctx, topicName); err != nil {
 		log.Fatal("failed to discover peers: %w", err)
 	}
 
 	// Create pubsub instance and join topic
-	pubSub, err := pubsub.NewGossipSub(ctx, host)
+	pubSub, err := pubsub.NewGossipSub(ctx, node)
 	if err != nil {
 		log.Fatal("failed to create pubsub: %w", err)
 	}
@@ -77,7 +80,7 @@ func main() {
 		log.Fatal("failed to subscribe to deployment response topic: %w", err)
 	}
 
-	jobs := app.NewJob(host, deploymentTopic, deploymentSub, responseTopic, responseSub)
+	jobs := app.NewJob(node, deploymentTopic, deploymentSub, responseTopic, responseSub)
 	go jobs.HandleDeploymentRequest(ctx)
 	go jobs.HandleDeploymentResponse(ctx)
 

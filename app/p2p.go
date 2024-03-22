@@ -9,6 +9,7 @@ import (
 	dht "github.com/libp2p/go-libp2p-kad-dht" // for peer discovery
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
+	peerstore "github.com/libp2p/go-libp2p/core/peer"
 	drouting "github.com/libp2p/go-libp2p/p2p/discovery/routing"
 	dutil "github.com/libp2p/go-libp2p/p2p/discovery/util"
 	"github.com/multiformats/go-multiaddr"
@@ -35,12 +36,24 @@ func (p *P2P) PeerID() peer.ID {
 	return p.Host.ID()
 }
 
-func (p *P2P) ListAddresses() []string {
-	var addrs []string
-	for _, addr := range p.Host.Addrs() {
-		addrs = append(addrs, fmt.Sprintf("%s/p2p/%s", addr, p.Host.ID().String()))
+func (p *P2P) ListAddresses() ([]string, error) {
+
+	peerInfo := peerstore.AddrInfo{
+		ID:    p.Host.ID(),
+		Addrs: p.Host.Addrs(),
 	}
-	return addrs
+
+	addrs, err := peerstore.AddrInfoToP2pAddrs(&peerInfo)
+	if err != nil {
+		fmt.Println("Error getting addresses:", err)
+		return nil, err
+	}
+
+	var results []string
+	for _, addr := range addrs {
+		results = append(results, addr.String())
+	}
+	return results, nil
 }
 
 func (p *P2P) AddPeer(ctx context.Context, addr string) error {

@@ -17,7 +17,7 @@ import (
 type PeerOperations interface {
 	AddPeer(ctx context.Context, addr string) error
 	DiscoverPeers(ctx context.Context, topicName string) error
-	ListAddresses() []string
+	ListAddresses() ([]string, error)
 	PeerID() peer.ID
 }
 
@@ -55,7 +55,7 @@ func (a *api) Run(port int) error {
 	// Start listening for incoming connections with port handling logic
 	fmt.Println("Listening for deployment requests...")
 retry:
-	if err := http.ListenAndServe(fmt.Sprintf(":%d", port), router); err != nil {
+	if err := router.Run(fmt.Sprintf(":%d", port)); err != nil {
 		if strings.Contains(err.Error(), "already in use") {
 			port++
 			fmt.Printf("Port %d already in use, retrying with port %d\n", port-1, port)
@@ -69,11 +69,21 @@ retry:
 
 // handleHealthRequest returns health information about the node
 func (a *api) handleHealthRequest(c *gin.Context) {
-	cpuAvailable, ramAvailable, err := pkg.GetComputeAvailable()
+	availableCompute, err := pkg.GetComputeAvailable()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"status":  "error",
 			"error":   "Error getting compute availability",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	addrs, err := a.P2P.ListAddresses()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"status":  "error",
+			"error":   "Error getting addresses",
 			"details": err.Error(),
 		})
 		return
@@ -85,12 +95,16 @@ func (a *api) handleHealthRequest(c *gin.Context) {
 		"message": "Healthy",
 		"data": gin.H{
 			"id":        a.P2P.PeerID(),
-			"addresses": a.P2P.ListAddresses(),
+			"addresses": addrs,
 			"peers":     connectedPeers,
 			"num_peers": len(connectedPeers),
 			"network":   "libp2p",
-			"cpu":       cpuAvailable,
-			"ram":       ramAvailable,
+			"cpu":       availableCompute.FreeCPUCores,
+			"ram":       availableCompute.FreeRAM,
+			"total_cpu": availableCompute.TotalCPUCores,
+			"total_ram": availableCompute.TotalRAM,
+			"cpu_model": availableCompute.TotalCPUModel,
+			"cpu_ghz":   availableCompute.ToalCPUGhz,
 		},
 	})
 }
@@ -132,10 +146,20 @@ func (a *api) handleDeploymentRequest(c *gin.Context) {
 
 	fmt.Printf("Received api request: %s %s\n", request.Program, strings.Join(request.Arguments, " "))
 
+	addrs, err := a.P2P.ListAddresses()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"status":  "error",
+			"error":   "Error getting addresses",
+			"details": err.Error(),
+		})
+		return
+	}
+
 	// Publish deployment request to pubsub topic
 	if err := a.Job.PublishDeploymentRequest(context.Background(), DeployRequest{
 		SourcePeerID: a.P2P.PeerID().String(),
-		SourceAddrs:  a.P2P.ListAddresses(),
+		SourceAddrs:  addrs,
 		Program:      request.Program,
 		Arguments:    request.Arguments,
 		TargetPeerID: peers[0].String(),
