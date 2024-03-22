@@ -99,11 +99,24 @@ func (a api) handleDeploymentRequest(c *gin.Context) {
 	for _, addr := range a.Host.Addrs() {
 		addrs = append(addrs, addr.String())
 	}
+
+	//select a random peer that is listening on thesame topic to deploy the program
+	peers := a.DeploymentTopic.ListPeers()
+	if len(peers) == 0 {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"status":  "error",
+			"error":   "No peers available to deploy program",
+			"details": "Ensure there are other peers listening on the deployment topic",
+		})
+		return
+	}
+
 	requestBytes, err := json.Marshal(DeployRequest{
-		SourcePeerID: a.Host.ID(),
+		SourcePeerID: a.Host.ID().String(),
 		SourceAddrs:  addrs,
 		Program:      request.Program,
 		Arguments:    request.Arguments,
+		TargetPeerID: peers[0].String(),
 	})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{

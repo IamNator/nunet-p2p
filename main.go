@@ -26,13 +26,13 @@ func main() {
 	topicName := getEnvOrDefault("TOPIC_NAME", defaultTopicName)
 	port, err := getPortFromEnv(defaultPort)
 	if err != nil {
-		log.Fatal(fmt.Errorf("failed to parse port: %w", err))
+		log.Fatal("failed to parse port: %w", err)
 	}
 
 	// Create a new libp2p host
 	host, err := libp2p.New(libp2p.FallbackDefaults)
 	if err != nil {
-		log.Fatal(fmt.Errorf("failed to create libp2p host: %w", err))
+		log.Fatal("failed to create libp2p host: %w", err)
 	}
 	defer host.Close()
 
@@ -41,29 +41,45 @@ func main() {
 
 	// Discover peers for communication
 	if err := app.DiscoverPeers(ctx, host, topicName); err != nil {
-		log.Fatal(fmt.Errorf("failed to discover peers: %w", err))
+		log.Fatal("failed to discover peers: %w", err)
 	}
 
 	// Create pubsub instance and join topic
 	pubSub, err := pubsub.NewGossipSub(ctx, host)
 	if err != nil {
-		log.Fatal(fmt.Errorf("failed to create pubsub: %w", err))
-	}
-	deploymentTopic, err := pubSub.Join(topicName)
-	if err != nil {
-		log.Fatal(fmt.Errorf("failed to join deployment topic: %w", err))
+		log.Fatal("failed to create pubsub: %w", err)
 	}
 
-	// Subscribe to deployment topic and handle requests concurrently
-	sub, err := deploymentTopic.Subscribe()
+	deploymentTopic, err := pubSub.Join(topicName)
 	if err != nil {
-		log.Fatal(fmt.Errorf("failed to subscribe to deployment topic: %w", err))
+		log.Fatal("failed to join deployment topic: %w", err)
 	}
-	go app.HandleDeploymentRequest(ctx, host, sub)
+
+	{
+		// Subscribe to deployment topic and handle requests concurrently
+		sub, err := deploymentTopic.Subscribe()
+		if err != nil {
+			log.Fatal("failed to subscribe to deployment topic: %w", err)
+		}
+
+		deploymentResponseTopic, err := pubSub.Join(topicName + "-response")
+		if err != nil {
+			log.Fatal("failed to join deployment response topic: %w", err)
+		}
+
+		// Subscribe to deployment response topic
+		responseSub, err := deploymentResponseTopic.Subscribe()
+		if err != nil {
+			log.Fatal("failed to subscribe to deployment response topic: %w", err)
+		}
+
+		go app.HandleDeploymentRequest(ctx, host, sub, deploymentResponseTopic)
+		go app.HandleDeploymentResponse(ctx, host, responseSub)
+	}
 
 	// Create and run the REST API
 	api := app.NewApi(host, deploymentTopic)
-	log.Fatal(api.Run(port)) // Use port number
+	log.Fatal(api.Run(port))
 }
 
 func getEnvOrDefault(key string, defaultValue string) string {

@@ -137,7 +137,12 @@
             </form>
         
             <div id="peerList" style="display: none;">
-                <p><strong>Connected Peers</strong></p>
+                <div>
+                    <p><strong>Peers Connected:</strong></p>
+                    <!-- add a search bar by peer id--> 
+                    <input type="text" id="peerSearch" placeholder="Search by peer id" onchange="searchPeer(event)" >
+                </div>
+
                 <div class="list" id="peerBox">
                     <div id="peerItems" >
                         <p>No peers connected</p>
@@ -251,16 +256,11 @@
         }
 
         function updatePeerList(list = []) {
-            if (list.length === 0) {
-                document.getElementById("peerList").style.display = "none";
-                return;
-            } 
-
             document.getElementById("peerList").style.display = "block";
             const peerItems = document.getElementById("peerItems");
             peerItems.innerHTML = "";
             if (list.length === 0) {
-                peerItems.innerHTML = "<p>No peers connected</p>";
+                peerItems.innerHTML = "<p>...</p>";
             } else {
                 const peerListHtml = list.map((peer, index) => {
                     return `<p><span>${index+1}. ${peer}</span></p>`;
@@ -268,6 +268,41 @@
                 peerItems.innerHTML = peerListHtml;
             }
         }
+
+            // Function to search peer
+        function searchPeer(event) {
+
+            event.preventDefault(); // Prevent form submission
+            const searchValue = event.target.value.toLowerCase();
+            const host = document.getElementById("host").value;
+            
+            peerSearch = document.getElementById("peerSearch")
+            // turn search inactive when searching
+            peerSearch.setAttribute("disabled", "true");
+            fetch(`${host}/health`)
+                .then((response) => {
+                    if (!response.ok) {
+                        return response.json().then(data => {
+                            throw new Error(data.details);
+                        }).catch(error => {
+                            throw new Error(`${error}`);
+                        });
+                    }
+                    return response.json();
+                })
+                .then((reqBody) => {
+                    const filteredPeers = reqBody.data.peers.filter(peer => peer.toLowerCase().includes(searchValue));
+                    updatePeerList(filteredPeers);
+                })
+                .catch((error) => {
+                    displayAlert("system-info-error", `${error.message}`);
+                    console.error(`There was a problem with the fetch operation: ${error}`);
+                }).finally(() => {
+                    peerSearch.removeAttribute("disabled");
+                });
+        }
+
+
 
         // Function to fetch system information
         function fetchSystemInfo(event) {
@@ -354,6 +389,7 @@
                 });
         }
 
+       
         // Function to deploy container
         function deployContainer(event) {
             event.preventDefault(); // Prevent form submission
