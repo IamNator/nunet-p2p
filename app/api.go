@@ -2,27 +2,39 @@ package app
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
 
-	"github.com/gin-gonic/gin"
-	pubsub "github.com/libp2p/go-libp2p-pubsub" // for message broadcasting
-	"github.com/libp2p/go-libp2p/core/host"
+	"github.com/gin-gonic/gin" // for message broadcasting
+	"github.com/libp2p/go-libp2p/core/peer"
 
 	"nunet/pkg"
 )
 
-type api struct {
-	Host            host.Host
-	DeploymentTopic *pubsub.Topic
+type PeerOperations interface {
+	AddPeer(ctx context.Context, addr string) error
+	DiscoverPeers(ctx context.Context, topicName string) error
+	ListAddresses() []string
+	PeerID() peer.ID
 }
 
-func NewApi(host host.Host, deploymentTopic *pubsub.Topic) *api {
+type JobOperations interface {
+	PublishDeploymentRequest(ctx context.Context, request DeployRequest) error
+	HandleDeploymentRequest(ctx context.Context)
+	HandleDeploymentResponse(ctx context.Context)
+	ListPeers() []peer.ID
+}
+
+type api struct {
+	P2P PeerOperations
+	Job JobOperations
+}
+
+func NewApi(p2p PeerOperations, job JobOperations) *api {
 	return &api{
-		Host:            host,
-		DeploymentTopic: deploymentTopic,
+		P2P: p2p,
+		Job: job,
 	}
 }
 
@@ -61,19 +73,13 @@ func (a api) handleHealthRequest(c *gin.Context) {
 		return
 	}
 
-	var address []string
-	for _, addr := range a.Host.Addrs() {
-		address = append(address, fmt.Sprintf("%s/p2p/%s", addr, a.Host.ID().String()))
-	}
-
-	connectedPeers := a.Host.Network().Peers()
-
+	connectedPeers := a.Job.ListPeers()
 	c.JSON(http.StatusOK, gin.H{
 		"status":  "success",
 		"message": "Healthy",
 		"data": gin.H{
-			"id":        a.Host.ID().String(),
-			"addresses": address,
+			"id":        a.P2P.PeerID(),
+			"addresses": a.P2P.ListAddresses(),
 			"peers":     connectedPeers,
 			"num_peers": len(connectedPeers),
 			"network":   "libp2p",
@@ -95,13 +101,8 @@ func (a api) handleDeploymentRequest(c *gin.Context) {
 		return
 	}
 
-	var addrs []string
-	for _, addr := range a.Host.Addrs() {
-		addrs = append(addrs, addr.String())
-	}
-
 	//select a random peer that is listening on thesame topic to deploy the program
-	peers := a.DeploymentTopic.ListPeers()
+	peers := a.Job.ListPeers()
 	if len(peers) == 0 {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"status":  "error",
@@ -111,29 +112,19 @@ func (a api) handleDeploymentRequest(c *gin.Context) {
 		return
 	}
 
-	requestBytes, err := json.Marshal(DeployRequest{
-		SourcePeerID: a.Host.ID().String(),
-		SourceAddrs:  addrs,
+	fmt.Printf("Received api request: %s %s\n", request.Program, strings.Join(request.Arguments, " "))
+
+	// Publish deployment request to pubsub topic
+	if err := a.Job.PublishDeploymentRequest(context.Background(), DeployRequest{
+		SourcePeerID: a.P2P.PeerID().String(),
+		SourceAddrs:  a.P2P.ListAddresses(),
 		Program:      request.Program,
 		Arguments:    request.Arguments,
 		TargetPeerID: peers[0].String(),
-	})
-	if err != nil {
+	}); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"status":  "error",
-			"error":   "Error marshalling deployment request",
-			"details": err.Error(),
-		})
-		return
-	}
-
-	fmt.Printf("Received deployment request: %s %s\n", request.Program, strings.Join(request.Arguments, " "))
-
-	// Publish deployment request to pubsub topic
-	if err := a.DeploymentTopic.Publish(context.Background(), requestBytes); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"status":  "error",
-			"error":   "Error publishing deployment request",
+			"error":   "Error publishing request",
 			"details": err.Error(),
 		})
 		return
@@ -156,7 +147,7 @@ func (a api) handleAddPeerRequest(c *gin.Context) {
 		return
 	}
 
-	if err := AddPeer(context.Background(), request.Address, a.Host); err != nil {
+	if err := a.P2P.AddPeer(context.Background(), request.Address); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"status":  "error",
 			"error":   "Error adding peer",

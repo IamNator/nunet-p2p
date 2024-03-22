@@ -7,20 +7,65 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
+	"time"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/host"
+	"github.com/libp2p/go-libp2p/core/peer"
 )
 
+type Job struct {
+	Host                    host.Host
+	DeploymentTopic         *pubsub.Topic
+	DeploymentSub           *pubsub.Subscription
+	DeploymentResponseTopic *pubsub.Topic
+	DeploymentResponseSub   *pubsub.Subscription
+}
+
+// NewJob creates a new Job instance
+func NewJob(
+	h host.Host,
+	deploymentTopic *pubsub.Topic,
+	deploymentSub *pubsub.Subscription,
+	deploymentResponseTopic *pubsub.Topic,
+	deploymentResponseSub *pubsub.Subscription,
+) *Job {
+	return &Job{
+		Host:                    h,
+		DeploymentTopic:         deploymentTopic,
+		DeploymentSub:           deploymentSub,
+		DeploymentResponseTopic: deploymentResponseTopic,
+		DeploymentResponseSub:   deploymentResponseSub,
+	}
+}
+
+func (j *Job) ListPeers() []peer.ID {
+	return j.Host.Peerstore().Peers()
+}
+
+func (j *Job) PublishDeploymentRequest(ctx context.Context, request DeployRequest) error {
+	requestBytes, err := json.Marshal(request)
+	if err != nil {
+		return fmt.Errorf("error marshalling deployment request: %w", err)
+	}
+
+	if err := j.DeploymentTopic.Publish(ctx, requestBytes); err != nil {
+		return fmt.Errorf("error publishing deployment request: %w", err)
+	}
+
+	fmt.Println("Deployment request sent")
+	return nil
+}
+
 // HandleDeploymentRequest processes incoming deployment requests
-func HandleDeploymentRequest(ctx context.Context, host host.Host, sub *pubsub.Subscription, topic *pubsub.Topic) {
+func (j *Job) HandleDeploymentRequest(ctx context.Context) {
 	for {
-		msg, err := sub.Next(ctx)
+		msg, err := j.DeploymentSub.Next(ctx)
 		if err != nil {
 			fmt.Println("Error reading message:", err)
 			continue
 		}
-		if host.ID() == msg.GetFrom() { // Ignore messages from self
+		if j.Host.ID() == msg.GetFrom() { // Ignore messages from self
 			continue
 		}
 
@@ -30,7 +75,7 @@ func HandleDeploymentRequest(ctx context.Context, host host.Host, sub *pubsub.Su
 			continue
 		}
 
-		if request.TargetPeerID != host.ID().String() {
+		if request.TargetPeerID != j.Host.ID().String() {
 			fmt.Println("Received deployment request for another peer")
 			continue
 		}
@@ -40,7 +85,7 @@ func HandleDeploymentRequest(ctx context.Context, host host.Host, sub *pubsub.Su
 			fmt.Println("Error processing deployment request:", err)
 		}
 
-		if err := SendDeploymentResponse(ctx, host, topic, request, pid, output, err); err != nil {
+		if err := j.sendDeploymentResponse(ctx, request, pid, output, err); err != nil {
 			fmt.Println("Error responding to deployment request:", err)
 		}
 	}
@@ -74,7 +119,7 @@ func runCmd(name string, args ...string) ([]string, int, error) {
 			buf := make([]byte, 1024)
 			n, err := stdout.Read(buf)
 			if n > 0 {
-				outputs = append(outputs, "Info : "+strings.TrimSpace(string(buf[:n])))
+				outputs = append(outputs, "Info: "+strings.TrimSpace(string(buf[:n])))
 			}
 			if err != nil {
 				break
@@ -88,7 +133,7 @@ func runCmd(name string, args ...string) ([]string, int, error) {
 			buf := make([]byte, 1024)
 			n, err := stderr.Read(buf)
 			if n > 0 {
-				outputs = append(outputs, "Error : "+strings.TrimSpace(string(buf[:n])))
+				outputs = append(outputs, "Error: "+strings.TrimSpace(string(buf[:n])))
 			}
 			if err != nil {
 				break
@@ -105,17 +150,20 @@ func runCmd(name string, args ...string) ([]string, int, error) {
 		return outputs, 0, fmt.Errorf("error waiting for command to finish: %w", err)
 	}
 
-	wg.Wait()
+	select {
+	case <-time.After(time.Minute / 2):
+		cmd.Process.Kill()
+	default:
+		wg.Wait()
+	}
 
 	fmt.Println("Command executed successfully")
 	return outputs, cmd.ProcessState.Pid(), nil
 }
 
 // SendDeploymentResponse sends a response to the deployment request
-func SendDeploymentResponse(
+func (j *Job) sendDeploymentResponse(
 	ctx context.Context,
-	host host.Host,
-	deploymentTopic *pubsub.Topic,
 	request DeployRequest,
 	pid int,
 	output []string,
@@ -138,7 +186,7 @@ func SendDeploymentResponse(
 		return fmt.Errorf("error marshalling deployment response: %w", err)
 	}
 
-	if err := deploymentTopic.Publish(ctx, responseBytes); err != nil {
+	if err := j.DeploymentResponseTopic.Publish(ctx, responseBytes); err != nil {
 		return fmt.Errorf("error publishing deployment response: %w", err)
 	}
 
@@ -146,14 +194,14 @@ func SendDeploymentResponse(
 	return nil
 }
 
-func HandleDeploymentResponse(ctx context.Context, host host.Host, sub *pubsub.Subscription) {
+func (j *Job) HandleDeploymentResponse(ctx context.Context) {
 	for {
-		msg, err := sub.Next(ctx)
+		msg, err := j.DeploymentResponseSub.Next(ctx)
 		if err != nil {
 			fmt.Println("Error reading message:", err)
 			continue
 		}
-		if host.ID() == msg.GetFrom() { // Ignore messages from self
+		if j.Host.ID() == msg.GetFrom() { // Ignore messages from self
 			continue
 		}
 
@@ -163,13 +211,13 @@ func HandleDeploymentResponse(ctx context.Context, host host.Host, sub *pubsub.S
 			continue
 		}
 
-		if response.SourcePeerID != host.ID().String() {
+		if response.SourcePeerID != j.Host.ID().String() {
 			fmt.Println("Received deployment response for another peer")
 			continue
 		}
 
 		if response.Success {
-			fmt.Printf("Deployment successful. PID: %d\n, outputs: %v \n", response.PID, strings.Join(response.Outputs, ","))
+			fmt.Printf("Deployment successful. PID: %d, %v \n", response.PID, strings.Join(response.Outputs, ","))
 		} else {
 			fmt.Println("Deployment failed")
 		}

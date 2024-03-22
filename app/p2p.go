@@ -14,7 +14,36 @@ import (
 	"github.com/multiformats/go-multiaddr"
 )
 
-func AddPeer(ctx context.Context, addr string, h host.Host) error {
+type P2P struct {
+	Host             host.Host
+	routingDiscovery *drouting.RoutingDiscovery
+}
+
+func NewP2P(h host.Host) (*P2P, error) {
+	kademliaDHT, err := initDHT(context.Background(), h)
+	if err != nil {
+		return nil, fmt.Errorf("error initializing dht: %s", err)
+	}
+
+	return &P2P{
+		Host:             h,
+		routingDiscovery: drouting.NewRoutingDiscovery(kademliaDHT),
+	}, nil
+}
+
+func (p *P2P) PeerID() peer.ID {
+	return p.Host.ID()
+}
+
+func (p *P2P) ListAddresses() []string {
+	var addrs []string
+	for _, addr := range p.Host.Addrs() {
+		addrs = append(addrs, fmt.Sprintf("%s/p2p/%s", addr, p.Host.ID().String()))
+	}
+	return addrs
+}
+
+func (p *P2P) AddPeer(ctx context.Context, addr string) error {
 	ma, err := multiaddr.NewMultiaddr(addr)
 	if err != nil {
 		return fmt.Errorf("error creating multiaddr: %s", err)
@@ -26,7 +55,7 @@ func AddPeer(ctx context.Context, addr string, h host.Host) error {
 		return fmt.Errorf("error getting peerinfo: %s", err)
 	}
 
-	if err := h.Connect(ctx, *peerinfo); err != nil {
+	if err := p.Host.Connect(ctx, *peerinfo); err != nil {
 		return fmt.Errorf("error connecting to peer: %s", err)
 	}
 
@@ -34,35 +63,30 @@ func AddPeer(ctx context.Context, addr string, h host.Host) error {
 	return nil
 }
 
-func DiscoverPeers(ctx context.Context, h host.Host, topicName string) error {
-	kademliaDHT, err := initDHT(ctx, h)
-	if err != nil {
-		return fmt.Errorf("error initializing dht: %s", err)
-	}
-	routingDiscovery := drouting.NewRoutingDiscovery(kademliaDHT)
-	dutil.Advertise(ctx, routingDiscovery, topicName) // Advertise the host's address
-	go refreshPeers(routingDiscovery, h, topicName)   // Refresh peers periodically
+func (p *P2P) DiscoverPeers(ctx context.Context, topicName string) error {
+	dutil.Advertise(ctx, p.routingDiscovery, topicName) // Advertise the host's address
+	go p.refreshPeers(topicName)                        // Refresh peers periodically
 	return nil
 }
 
-func refreshPeers(routingDiscovery *drouting.RoutingDiscovery, h host.Host, topicName string) {
+func (p *P2P) refreshPeers(topicName string) {
 
 	// Look for others who have announced and attempt to connect to them
 	anyConnected := false
 	ctx := context.Background()
 	for {
 		fmt.Println("Searching for peers...")
-		peerChan, err := routingDiscovery.FindPeers(ctx, topicName)
+		peerChan, err := p.routingDiscovery.FindPeers(ctx, topicName)
 		if err != nil {
 			fmt.Println("Error finding peers:", err)
 			continue
 		}
 
 		for peer := range peerChan {
-			if peer.ID == h.ID() {
+			if peer.ID == p.Host.ID() {
 				continue // No self connection
 			}
-			if err := h.Connect(ctx, peer); err != nil {
+			if err := p.Host.Connect(ctx, peer); err != nil {
 				fmt.Printf("Failed connecting to %s, error: %s\n;\n", peer.ID, err.Error())
 			} else {
 				fmt.Println("Connected to:", peer.ID)
@@ -70,7 +94,7 @@ func refreshPeers(routingDiscovery *drouting.RoutingDiscovery, h host.Host, topi
 			}
 		}
 
-		time.Sleep(time.Second)
+		time.Sleep(time.Minute / 3)
 
 		if anyConnected {
 			fmt.Println("Peer discovery complete")

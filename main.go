@@ -39,8 +39,13 @@ func main() {
 	// Print host information
 	printHostInfo(host)
 
+	// Create a new P2P instance
+	p2p, err := app.NewP2P(host)
+	if err != nil {
+		log.Fatal("failed to create P2P instance: %w", err)
+	}
 	// Discover peers for communication
-	if err := app.DiscoverPeers(ctx, host, topicName); err != nil {
+	if err := p2p.DiscoverPeers(ctx, topicName); err != nil {
 		log.Fatal("failed to discover peers: %w", err)
 	}
 
@@ -55,30 +60,29 @@ func main() {
 		log.Fatal("failed to join deployment topic: %w", err)
 	}
 
-	{
-		// Subscribe to deployment topic and handle requests concurrently
-		sub, err := deploymentTopic.Subscribe()
-		if err != nil {
-			log.Fatal("failed to subscribe to deployment topic: %w", err)
-		}
-
-		deploymentResponseTopic, err := pubSub.Join(topicName + "-response")
-		if err != nil {
-			log.Fatal("failed to join deployment response topic: %w", err)
-		}
-
-		// Subscribe to deployment response topic
-		responseSub, err := deploymentResponseTopic.Subscribe()
-		if err != nil {
-			log.Fatal("failed to subscribe to deployment response topic: %w", err)
-		}
-
-		go app.HandleDeploymentRequest(ctx, host, sub, deploymentResponseTopic)
-		go app.HandleDeploymentResponse(ctx, host, responseSub)
+	// Subscribe to deployment topic and handle requests concurrently
+	deploymentSub, err := deploymentTopic.Subscribe()
+	if err != nil {
+		log.Fatal("failed to subscribe to deployment topic: %w", err)
 	}
 
+	deploymentResponseTopic, err := pubSub.Join(topicName + "-response")
+	if err != nil {
+		log.Fatal("failed to join deployment response topic: %w", err)
+	}
+
+	// Subscribe to deployment response topic
+	responseSub, err := deploymentResponseTopic.Subscribe()
+	if err != nil {
+		log.Fatal("failed to subscribe to deployment response topic: %w", err)
+	}
+
+	jobs := app.NewJob(host, deploymentTopic, deploymentSub, deploymentResponseTopic, responseSub)
+	go jobs.HandleDeploymentRequest(ctx)
+	go jobs.HandleDeploymentResponse(ctx)
+
 	// Create and run the REST API
-	api := app.NewApi(host, deploymentTopic)
+	api := app.NewApi(p2p, jobs)
 	log.Fatal(api.Run(port))
 }
 
