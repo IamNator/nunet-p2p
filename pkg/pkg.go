@@ -121,16 +121,20 @@ func RunCmd(name string, args ...string) ([]string, int, error) {
 		return nil, 0, fmt.Errorf("error starting command: %w", err)
 	}
 
-	// Wait for the command to finish
-	if err := cmd.Wait(); err != nil {
-		return outputs, 0, fmt.Errorf("error waiting for command to finish: %w", err)
-	}
+	done := make(chan error)
+	go func() {
+		done <- cmd.Wait()
+	}()
 
+	defer wg.Wait()
 	select {
 	case <-time.After(time.Minute / 2):
 		cmd.Process.Kill()
-	default:
-		wg.Wait()
+		return outputs, 0, fmt.Errorf("command timed out")
+	case err := <-done:
+		if err != nil {
+			return outputs, 0, fmt.Errorf("error waiting for command to finish: %w", err)
+		}
 	}
 
 	fmt.Println("Command executed successfully")

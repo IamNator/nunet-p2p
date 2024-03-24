@@ -53,8 +53,12 @@ func (p *P2P) refreshPeers(topicName string) {
 			if peer.ID == p.Host.ID() {
 				continue // No self connection
 			}
+			if len(peer.Addrs) == 0 {
+				continue // No address to connect to
+			}
 			if err := p.Host.Connect(ctx, peer); err != nil {
-				fmt.Printf("Failed connecting to %s, error: %s\n;\n", peer.ID, err.Error())
+				// fmt.Printf("Failed connecting to %s, error: %s\n;\n", peer.ID, err.Error())
+				// fmt.Println("Failed connecting to:", peer.ID)
 			} else {
 				fmt.Println("Connected to:", peer.ID)
 				anyConnected = true

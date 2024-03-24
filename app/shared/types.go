@@ -35,7 +35,7 @@ type DeployRequest struct {
 }
 
 type DeployResponse struct {
-	Success      bool     `json:"success"`
+	Err          string   `json:"err"`
 	SourcePeerID string   `json:"source_peer_id"`
 	SourceAddrs  []string `json:"source_addrs"`
 

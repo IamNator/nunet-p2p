@@ -16,7 +16,7 @@ type P2P struct {
 	routingDiscovery *drouting.RoutingDiscovery
 }
 
-func NewP2P(h host.Host) (*P2P, error) {
+func New(h host.Host) (*P2P, error) {
 	kademliaDHT, err := initDHT(context.Background(), h)
 	if err != nil {
 		return nil, fmt.Errorf("error initializing dht: %s", err)

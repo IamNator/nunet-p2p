@@ -259,7 +259,7 @@
             document.getElementById("peerList").style.display = "block";
             const peerItems = document.getElementById("peerItems");
             peerItems.innerHTML = "";
-            if (list.length === 0) {
+            if (!(list) || (list.length === 0)) {
                 peerItems.innerHTML = "<p>...</p>";
             } else {
                 const peerListHtml = list.map((peer, index) => {

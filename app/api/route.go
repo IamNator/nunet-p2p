@@ -44,6 +44,7 @@ func NewApi(p2p PeerOperations, job JobOperations) *api {
 
 // Run starts the api server and listens for incoming connections
 func (a *api) Run(port int) error {
+	
 	router := gin.Default()
 	router.Use(pkg.CorsMiddleware()) // attach cors middleware
 

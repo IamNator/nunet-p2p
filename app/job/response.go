@@ -18,7 +18,7 @@ func (j *Job) sendDeploymentResponse(
 	err error,
 ) error {
 	response := shared.DeployResponse{
-		Success:      err == nil,
+		Err:          err.Error(),
 		SourcePeerID: request.SourcePeerID,
 		SourceAddrs:  request.SourceAddrs,
 		Program:      request.Program,
@@ -59,15 +59,15 @@ func (j *Job) HandleDeploymentResponse(ctx context.Context) {
 			continue
 		}
 
-		if response.SourcePeerID != j.Host.ID().String() {
+		if response.SourcePeerID != j.Host.ID().String() { // Ignore messages not meant for this peer
 			fmt.Println("Received deployment response for another peer")
 			continue
 		}
 
-		if response.Success {
+		if strings.TrimSpace(response.Err) == "" {
 			fmt.Printf("Deployment successful. PID: %d, %v \n", response.PID, strings.Join(response.Outputs, ","))
 		} else {
-			fmt.Println("Deployment failed")
+			fmt.Printf("Deployment failed: %s\n", response.Err)
 		}
 	}
 }

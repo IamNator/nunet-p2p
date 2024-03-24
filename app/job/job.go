@@ -14,8 +14,8 @@ type Job struct {
 	DeploymentResponseSub   *pubsub.Subscription
 }
 
-// NewJob creates a new Job instance
-func NewJob(
+// New creates a new Job instance
+func New(
 	h host.Host,
 	deploymentTopic *pubsub.Topic,
 	deploymentSub *pubsub.Subscription,

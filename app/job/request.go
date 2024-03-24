@@ -41,7 +41,7 @@ func (j *Job) HandleDeploymentRequest(ctx context.Context) {
 			continue
 		}
 
-		if request.TargetPeerID != j.Host.ID().String() {
+		if request.TargetPeerID != j.Host.ID().String() { // Ignore messages not meant for this peer
 			fmt.Println("Received deployment request for another peer")
 			continue
 		}
