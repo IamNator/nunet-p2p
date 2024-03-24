@@ -1,17 +1,17 @@
-package app
+package job
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os/exec"
 	"strings"
-	"sync"
-	"time"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
+
+	"nunet/app/shared"
+	"nunet/pkg"
 )
 
 type Job struct {
@@ -43,7 +43,7 @@ func (j *Job) ListPeers() []peer.ID {
 	return j.DeploymentTopic.ListPeers()
 }
 
-func (j *Job) PublishDeploymentRequest(ctx context.Context, request DeployRequest) error {
+func (j *Job) PublishDeploymentRequest(ctx context.Context, request shared.DeployRequest) error {
 	requestBytes, err := json.Marshal(request)
 	if err != nil {
 		return fmt.Errorf("error marshalling deployment request: %w", err)
@@ -69,7 +69,7 @@ func (j *Job) HandleDeploymentRequest(ctx context.Context) {
 			continue
 		}
 
-		var request DeployRequest
+		var request shared.DeployRequest
 		if err := json.Unmarshal(msg.GetData(), &request); err != nil {
 			fmt.Println("Error unmarshalling request:", err)
 			continue
@@ -80,7 +80,7 @@ func (j *Job) HandleDeploymentRequest(ctx context.Context) {
 			continue
 		}
 
-		output, pid, err := runCmd(request.Program, request.Arguments...)
+		output, pid, err := pkg.RunCmd(request.Program, request.Arguments...)
 		if err != nil {
 			fmt.Println("Error processing deployment request:", err)
 		}
@@ -91,85 +91,15 @@ func (j *Job) HandleDeploymentRequest(ctx context.Context) {
 	}
 }
 
-// runCmd executes the given command with the provided arguments
-func runCmd(name string, args ...string) ([]string, int, error) {
-
-	fmt.Printf("Executing command: %s %s\n", name, strings.Join(args, " "))
-	cmd := exec.Command(name, args...)
-
-	// get the outputs
-	var outputs []string
-
-	// Attach the stdout and stderr pipes
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		return nil, 0, fmt.Errorf("error attaching stdout pipe: %w", err)
-	}
-	stderr, err := cmd.StderrPipe()
-	if err != nil {
-		return nil, 0, fmt.Errorf("error attaching stderr pipe: %w", err)
-	}
-
-	wg := sync.WaitGroup{}
-	wg.Add(2)
-	// get the outputs
-	go func() {
-		defer wg.Done()
-		for {
-			buf := make([]byte, 1024)
-			n, err := stdout.Read(buf)
-			if n > 0 {
-				outputs = append(outputs, "Info: "+strings.TrimSpace(string(buf[:n])))
-			}
-			if err != nil {
-				break
-			}
-		}
-	}()
-
-	go func() {
-		defer wg.Done()
-		for {
-			buf := make([]byte, 1024)
-			n, err := stderr.Read(buf)
-			if n > 0 {
-				outputs = append(outputs, "Error: "+strings.TrimSpace(string(buf[:n])))
-			}
-			if err != nil {
-				break
-			}
-		}
-	}()
-
-	if err := cmd.Start(); err != nil {
-		return nil, 0, fmt.Errorf("error starting command: %w", err)
-	}
-
-	// Wait for the command to finish
-	if err := cmd.Wait(); err != nil {
-		return outputs, 0, fmt.Errorf("error waiting for command to finish: %w", err)
-	}
-
-	select {
-	case <-time.After(time.Minute / 2):
-		cmd.Process.Kill()
-	default:
-		wg.Wait()
-	}
-
-	fmt.Println("Command executed successfully")
-	return outputs, cmd.ProcessState.Pid(), nil
-}
-
 // SendDeploymentResponse sends a response to the deployment request
 func (j *Job) sendDeploymentResponse(
 	ctx context.Context,
-	request DeployRequest,
+	request shared.DeployRequest,
 	pid int,
 	output []string,
 	err error,
 ) error {
-	response := DeployResponse{
+	response := shared.DeployResponse{
 		Success:      err == nil,
 		SourcePeerID: request.SourcePeerID,
 		SourceAddrs:  request.SourceAddrs,
@@ -205,7 +135,7 @@ func (j *Job) HandleDeploymentResponse(ctx context.Context) {
 			continue
 		}
 
-		var response DeployResponse
+		var response shared.DeployResponse
 		if err := json.Unmarshal(msg.GetData(), &response); err != nil {
 			fmt.Println("Error unmarshalling response:", err)
 			continue

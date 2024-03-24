@@ -1,7 +1,12 @@
 package pkg
 
 import (
+	"fmt"
+	"os/exec"
 	"runtime"
+	"strings"
+	"sync"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
@@ -60,4 +65,74 @@ func CorsMiddleware() gin.HandlerFunc {
 		}
 		c.Next()
 	}
+}
+
+// RunCmd executes the given command with the provided arguments
+func RunCmd(name string, args ...string) ([]string, int, error) {
+
+	fmt.Printf("Executing command: %s %s\n", name, strings.Join(args, " "))
+	cmd := exec.Command(name, args...)
+
+	// get the outputs
+	var outputs []string
+
+	// Attach the stdout and stderr pipes
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, 0, fmt.Errorf("error attaching stdout pipe: %w", err)
+	}
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return nil, 0, fmt.Errorf("error attaching stderr pipe: %w", err)
+	}
+
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+	// get the outputs
+	go func() {
+		defer wg.Done()
+		for {
+			buf := make([]byte, 1024)
+			n, err := stdout.Read(buf)
+			if n > 0 {
+				outputs = append(outputs, "Info: "+strings.TrimSpace(string(buf[:n])))
+			}
+			if err != nil {
+				break
+			}
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+		for {
+			buf := make([]byte, 1024)
+			n, err := stderr.Read(buf)
+			if n > 0 {
+				outputs = append(outputs, "Error: "+strings.TrimSpace(string(buf[:n])))
+			}
+			if err != nil {
+				break
+			}
+		}
+	}()
+
+	if err := cmd.Start(); err != nil {
+		return nil, 0, fmt.Errorf("error starting command: %w", err)
+	}
+
+	// Wait for the command to finish
+	if err := cmd.Wait(); err != nil {
+		return outputs, 0, fmt.Errorf("error waiting for command to finish: %w", err)
+	}
+
+	select {
+	case <-time.After(time.Minute / 2):
+		cmd.Process.Kill()
+	default:
+		wg.Wait()
+	}
+
+	fmt.Println("Command executed successfully")
+	return outputs, cmd.ProcessState.Pid(), nil
 }

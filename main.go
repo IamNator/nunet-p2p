@@ -4,13 +4,16 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"nunet/app"
 	"os"
 	"strconv"
 
-	"github.com/libp2p/go-libp2p"
+	libp2p "github.com/libp2p/go-libp2p"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/host"
+
+	"nunet/app/api"
+	"nunet/app/job"
+	"nunet/app/p2p"
 )
 
 const (
@@ -42,13 +45,13 @@ func main() {
 	printHostInfo(node)
 
 	// Create a new P2P instance
-	p2p, err := app.NewP2P(node)
+	P2P, err := p2p.NewP2P(node)
 	if err != nil {
 		log.Fatal("failed to create P2P instance: %w", err)
 	}
 
 	// Discover peers for communication
-	if err := p2p.DiscoverPeers(ctx, topicName); err != nil {
+	if err := P2P.DiscoverPeers(ctx, topicName); err != nil {
 		log.Fatal("failed to discover peers: %w", err)
 	}
 
@@ -80,13 +83,13 @@ func main() {
 		log.Fatal("failed to subscribe to deployment response topic: %w", err)
 	}
 
-	jobs := app.NewJob(node, deploymentTopic, deploymentSub, responseTopic, responseSub)
+	jobs := job.NewJob(node, deploymentTopic, deploymentSub, responseTopic, responseSub)
 	go jobs.HandleDeploymentRequest(ctx)
 	go jobs.HandleDeploymentResponse(ctx)
 
 	// Create and run the REST API
-	api := app.NewApi(p2p, jobs)
-	log.Fatal(api.Run(port))
+	API := api.NewApi(P2P, jobs)
+	log.Fatal(API.Run(port))
 }
 
 func getEnvOrDefault(key string, defaultValue string) string {

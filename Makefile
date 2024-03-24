@@ -9,3 +9,6 @@ run-detached:
 
 return:
 	tmux a -t mywindow
+
+fmt:
+	goimports-reviser -rm-unused -use-cache -set-alias -format ./...

@@ -71,3 +71,5 @@ In conclusion, the Nunet P2P Application represents a significant milestone in t
 
 **Appendices:**
 Additional information, such as code snippets, technical specifications, and diagrams, will be included in the appendices for reference.
+
+- https://www.youtube.com/watch?v=4v-iIB0C9_8&ab_channel=IPFS

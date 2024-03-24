@@ -1,4 +1,4 @@
-package app
+package p2p
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 	peerstore "github.com/libp2p/go-libp2p/core/peer"
 	drouting "github.com/libp2p/go-libp2p/p2p/discovery/routing"
 	dutil "github.com/libp2p/go-libp2p/p2p/discovery/util"
-	"github.com/multiformats/go-multiaddr"
+	multiaddr "github.com/multiformats/go-multiaddr"
 )
 
 type P2P struct {
