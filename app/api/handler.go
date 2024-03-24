@@ -108,7 +108,7 @@ func (a *api) handleDeploymentRequest(c *gin.Context) {
 		SourceAddrs:  addrs,
 		Program:      request.Program,
 		Arguments:    request.Arguments,
-		TargetPeerID: peers[0].String(),
+		TargetPeerID: peers[0].String(), // send to first peer
 	}); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"status":  "error",
