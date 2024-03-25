@@ -4,16 +4,23 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
+	"github.com/libp2p/go-libp2p-core/discovery"
 	dht "github.com/libp2p/go-libp2p-kad-dht" // for peer discovery
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
 	drouting "github.com/libp2p/go-libp2p/p2p/discovery/routing"
 )
 
+type RoutingDiscovery interface {
+	Advertise(ctx context.Context, ns string, opts ...discovery.Option) (time.Duration, error)
+	FindPeers(ctx context.Context, ns string, opts ...discovery.Option) (<-chan peer.AddrInfo, error)
+}
+
 type P2P struct {
 	Host             host.Host
-	routingDiscovery *drouting.RoutingDiscovery
+	routingDiscovery RoutingDiscovery
 }
 
 func New(h host.Host) (*P2P, error) {
