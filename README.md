@@ -1,8 +1,8 @@
-**Project Documentation**
+## **Project Documentation: Nunet Job/Container Manager Application**
 
 **Project Overview:**
-- **UI**: [Nunet P2P UI](https://iamnator.github.io/nunet-p2p/)
-- **Bootstrap Node**: [Nunet Bootstrap Node](https://nunet.verifyotp.io)
+- **UI:** [Nunet P2P UI](https://iamnator.github.io/nunet-p2p/)
+- **Bootstrap Node:** [Nunet Bootstrap Node](https://nunet.verifyotp.io)
 
 **Thought Process:**
 - Initially, I considered implementing the solution using a REST API with hard-coded addresses for peer communication. I developed a basic solution based on this approach, which worked effectively.
@@ -23,53 +23,85 @@
 
 ---
 
-This documentation provides a comprehensive overview of the project's development process, challenges faced, and potential areas for improvement. It also highlights the iterative nature of the development process and the adaptability required to navigate challenges effectively.
-
-
----
-
-**Documentation: Nunet P2P Application**
+## **Using the Application: A Developer's Guide**
 
 **Introduction:**
-Welcome to the documentation for the Nunet P2P Application. This document aims to provide a comprehensive overview of the project's development process, its architecture, functionality, and future prospects. It is intended for developers, stakeholders, and anyone interested in understanding the inner workings of the Nunet P2P Application.
+This guide aims to walk you through the steps of utilizing the Nunet P2P Application for seamless peer-to-peer communication and distributed computing. Below, we provide detailed instructions on connecting to a node, adding a peer, and running a job. Accompanied by screenshots, this guide ensures an easy and developer-friendly experience.
 
-**Project Overview:**
-The Nunet P2P Application is designed to facilitate peer-to-peer communication and distributed computing using libp2p. It allows nodes to discover each other, exchange messages, and collaborate on computing tasks seamlessly. The utilization of libp2p provides robust and efficient peer-to-peer communication, making the application suitable for various decentralized use cases.
+**Connecting to a Node:**
 
-**Architecture:**
-The architecture of the Nunet P2P Application consists of several key components, including nodes, a bootstrap node, a pubsub system, and a user interface. Nodes communicate with each other using libp2p's protocols, while the bootstrap node serves as an entry point for new nodes to join the network. The pubsub system enables efficient message broadcasting, facilitating communication between nodes. Diagrams illustrating the interactions between these components will be provided for clarity.
+1. **Accessing the UI:** Open your preferred web browser and navigate to the [Nunet P2P UI](https://iamnator.github.io/nunet-p2p/).
 
-**Installation and Setup:**
-To set up the Nunet P2P Application, follow these steps:
-1. Run the program
-2. Connect to the bootstrap node.
-3. Configure node settings and parameters.
-4. Start the application and join the network.
+2. **Enter Host Machine Address:** Input the address of the host machine (e.g., https://nunet.verifyotp.io ) into the provided field and hit "Connect".
 
-Detailed instructions for each step will be provided, ensuring a smooth setup process for users.
 
-**User Interface:**
-The user interface of the Nunet P2P Application provides users with intuitive controls for interacting with the network. Users can connect to peers, send and receive messages, and monitor network activity. The UI is designed to be user-friendly and accessible, even for users with limited technical knowledge.
+**Adding a Peer:**
 
-**Resource Management:**
-The Nunet P2P Application includes functionality for assessing and managing the computing resources of nodes. Tasks are allocated based on resource availability, ensuring efficient utilization of computing resources across the network. This feature enhances the application's scalability and performance, particularly in distributed computing scenarios.
+1. **Initiating Peer Addition:** After establishing connection with a host machine, proceed to add peers to the network by clicking on the "Add Peer" button within the UI.
 
-**Communication:**
-Communication between nodes in the Nunet P2P Application is facilitated through a pubsub system. Nodes subscribe to topics of interest and publish messages to those topics, allowing for efficient message broadcasting and dissemination. A single pubsub topic is used for general communication, while a separate topic is dedicated to handling responses and acknowledgments.
+   ![Add Peer](.github/assets/ui-add-peer.png)
 
-**Testing:**
-The Nunet P2P Application has undergone extensive testing to ensure its reliability, scalability, and performance. Testing methodologies include unit tests, integration tests, and deployment testing on AWS EC2 instances. Various test cases and scenarios were used to validate the application's functionality and robustness.
+2. **Provide Peer Details:** Input the address of the peer you wish to add into the corresponding fields.
 
-**Challenges and Learnings:**
-Developing the Nunet P2P Application presented several challenges, particularly in working with libp2p. Overcoming these challenges required a deep dive into libp2p's documentation, as well as seeking assistance from online forums and communities. Despite the initial learning curve, the experience proved to be both challenging and rewarding, enhancing my understanding of peer-to-peer networking concepts.
+   ![Enter Peer Details](.github/assets/ui-add-peer-input.png)
 
-**Limitations and Future Work:**
-While the Nunet P2P Application is functional and robust, it has certain limitations that could be addressed in future iterations. For example, employing streams from libp2p could reduce network load, while implementing mechanisms for dynamic task allocation could improve resource utilization further. Future work will focus on addressing these limitations and enhancing the application's capabilities.
+3. **Confirmation:** Once the peer details are entered, click "Add Peer" to incorporate the peer into the network. A confirmation message will verify the addition.
 
-**Conclusion:**
-In conclusion, the Nunet P2P Application represents a significant milestone in the field of distributed computing. Its use of libp2p enables efficient and scalable peer-to-peer communication, making it suitable for a wide range of decentralized applications. By documenting the development process, challenges faced, and future prospects, this documentation aims to provide valuable insights for developers and stakeholders alike.
+   ![Add Peer Confirmation](.github/assets/ui-add-peer-success.png)
 
-**Appendices:**
-Additional information, such as code snippets, technical specifications, and diagrams, will be included in the appendices for reference.
+`The programs automatically handles peer discovery; this process simply expedites the operation.`
 
-- https://www.youtube.com/watch?v=4v-iIB0C9_8&ab_channel=IPFS
+**Running a Job:**
+
+1. **Provide Job Details:** Specify the program and its arguments for the job within the designated fields.
+
+   ![Enter Job Details](.github/assets/ui-run-job-input.png)
+
+2. **Job Execution:** Upon entering the job details, initiate the job execution by clicking "Run Job". A confirmation message will indicate successful job execution.
+
+   ![Job Execution Confirmation](.github/assets/ui-run-job-success.png)
+
+
+**Local Testing Guide**
+
+**Introduction:**
+Testing the Nunet P2P Application locally is a crucial step in ensuring its functionality and reliability. This guide provides instructions on setting up and testing the application on your local machine. By running two instances of the program and connecting them via the UI, you can simulate peer-to-peer communication and execute jobs effectively.
+
+**Setting Up Local Testing Environment:**
+
+1. **Clone Repository:** Begin by cloning the Nunet P2P Application repository to your local machine:
+
+   ```bash
+   git clone https://github.com/IamNator/nunet-p2p.git
+   ```
+
+2. **Navigate to Directory:** Move into the project directory:
+
+   ```bash
+   cd nunet-p2p
+   ```
+
+3. **Run Instances:** Open two terminal windows and run an instance of the program in each:
+
+   ```bash
+   go run main.go
+   ```
+
+4. **Access UI:** Open two instances of the Nunet UI in your web browser. You can do this by navigating to [Nunet Local UI](./public/index.html) in two separate browser tabs or windows.
+
+**Testing Peer Communication and Job Execution:**
+
+1. **Connect Instances:** In one UI instance, connect to the first program instance by following the steps outlined in the "Connecting to a Node" section of this guide.
+
+2. **Add Peer:** Use the same UI instance to add the second program instance as a peer, following the steps provided in the "Adding a Peer" section.
+
+3. **Confirm Connection:** Verify successful connection and peer addition through the UI interface.
+
+4. **Execute Job:** Within the UI, initiate a job execution targeting the second program instance by following the steps outlined in the "Running a Job" section.
+
+![Local Testing Gif](.github/assets/local-testing-gif.gif)
+
+**Local Testing Conclusion:**
+By following these steps, you have successfully set up and tested the Nunet P2P Application locally. Through this process, you've simulated peer-to-peer communication and executed a job between two instances of the program. This local testing ensures the robustness and reliability of the application before deployment to production environments. Feel free to explore additional features and functionalities to further enhance your testing experience.
+
+

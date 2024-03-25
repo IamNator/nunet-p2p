@@ -155,8 +155,8 @@
         </div>
 
         <div>
-            <h2>Deploy Job</h2>
-            <form id="deployForm" onSubmit="deployContainer(event)">
+            <h2>Run Job</h2>
+            <form id="deployForm" onSubmit="runJob(event)">
                 <div class="">
                     <label for="program">Program Name:</label>
                     <input type="text" id="program" name="program" placeholder="Enter program name" value="echo"
@@ -167,10 +167,9 @@
                     <input type="text" id="arguments" name="arguments" placeholder="Enter arguments (comma-separated)"
                         value="hello"></input>
                 </div>
-                <p id="deploy-success" style="display: none;">Container deployed successfully!</p>
-                <p id="deploy-error" style="display: none;">Failed to deploy container. Please check the URL and try
-                    again.</p>
-                <button id="deployFormButton" type="submit">Deploy Container</button>
+                <p id="deploy-success" style="display: none;">job request sent!</p>
+                <p id="deploy-error" style="display: none;">Failed to run job. Check payload and try again.</p>
+                <button id="deployFormButton" type="submit">Run Job</button>
             </form>
         </div>
     </div>
@@ -390,8 +389,8 @@
         }
 
        
-        // Function to deploy container
-        function deployContainer(event) {
+        // Function to run job
+        function runJob(event) {
             event.preventDefault(); // Prevent form submission
             const program = document.getElementById("program").value;
             const host = getData("host");

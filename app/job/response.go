@@ -17,8 +17,12 @@ func (j *Job) sendDeploymentResponse(
 	output []string,
 	err error,
 ) error {
+	var Err string
+	if err != nil {
+		Err = err.Error()
+	}
 	response := shared.DeployResponse{
-		Err:          err.Error(),
+		Err:          Err,
 		SourcePeerID: request.SourcePeerID,
 		SourceAddrs:  request.SourceAddrs,
 		Program:      request.Program,

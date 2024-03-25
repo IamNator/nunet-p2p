@@ -120,7 +120,7 @@ func (a *api) handleDeploymentRequest(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"status":  "success",
-		"message": "Deployment request sent",
+		"message": "Job request sent",
 	})
 }
 
